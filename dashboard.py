@@ -16,7 +16,7 @@ try:
 except ImportError:
     SKLEARN_OK = False
 
-st.set_page_config(page_title="유학생 불법체류 실무 분석", page_icon="📊", layout="wide")
+st.set_page_config(page_title="국제학생 불법체류 실무 분석", page_icon="📊", layout="wide")
 def check_password():
     if "password_correct" not in st.session_state:
         st.session_state["password_correct"] = False
