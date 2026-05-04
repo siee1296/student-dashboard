@@ -203,10 +203,10 @@ st.title("📊 유학생 불법체류 실무 분석 대시보드")
 st.caption(f"분석 연도: {sorted(year_sel)} | 교육과정: {과정_sel} | 국적: {국적_sel} "
            f"| 불체자: 2019~2025 전수, 분모: 2023~2025")
 
-m1,m2,m3 = st.columns(3)
-m1.metric("분모 대상(2023~2025)", f"{tot_f:,}명")
+m1,m2 = st.columns(2)
+m1.metric("학생 수(2023~2025)", f"{tot_f:,}명")
 m2.metric("불체 발생(전수)", f"{bu_f:,}명")
-m3.metric("전체 불체율", f"{f1(r_f)}%")
+#m3.metric("전체 불체율", f"{f1(r_f)}%")
 
 st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
 
