@@ -17,7 +17,25 @@ except ImportError:
     SKLEARN_OK = False
 
 st.set_page_config(page_title="유학생 불법체류 실무 분석", page_icon="📊", layout="wide")
+def check_password():
+    if "password_correct" not in st.session_state:
+        st.session_state["password_correct"] = False
 
+    if not st.session_state["password_correct"]:
+        st.markdown("### 🔒 대시보드 열람 권한이 필요합니다.")
+        pwd = st.text_input("열람용 비밀번호를 입력하세요:", type="password")
+        
+        if pwd:
+            if pwd == "5226":
+                st.session_state["password_correct"] = True
+                st.rerun()
+            else:
+                st.error("비밀번호가 일치하지 않습니다.")
+        return False
+    return True
+
+if not check_password():
+    st.stop()
 CR = "#E63946"; CW = "#F4A261"; CS = "#2A9D8F"
 CI = "#457B9D"; CD = "#1d3557"; CY = "#e9c46a"
 
