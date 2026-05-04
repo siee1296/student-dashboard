@@ -1115,7 +1115,7 @@ with t8:
 
 
 # ════════════════════════════════════════════════════════
-# 탭9: 입시 시뮬레이터
+# 탭9: 입시 시뮬레이터 (수정본)
 # ════════════════════════════════════════════════════════
 with t9:
     st.markdown("### 🎯 입시 시뮬레이터")
@@ -1126,9 +1126,14 @@ with t9:
     </div>""", unsafe_allow_html=True)
 
     # ── 과거 불체율 계산 (base rates) ───────────────────────────────
+    # [수정 포인트] 4.1 기준 통계 반영인원("분모포함"=="Y")을 명확한 분모로 설정
+    # 분자 역시 해당 분모 집단 내에서 발생한 불체자로 한정하여 산식 정상화
+    df_sim_denom = df[df["분모포함"] == "Y"].copy()
+    df_sim_bu = df_sim_denom[df_sim_denom["불체여부"] == "Y"].copy()
+
     def base_rate(grp_col, val):
-        bu  = len(df_bu_all[df_bu_all[grp_col]==val])
-        dn  = len(df_denom_base[df_denom_base[grp_col]==val])
+        bu  = len(df_sim_bu[df_sim_bu[grp_col]==val])
+        dn  = len(df_sim_denom[df_sim_denom[grp_col]==val])
         return bu/dn if dn>0 else 0.0
 
     nat_rates = {n: base_rate("국적_그룹", n) for n in _VALID}
@@ -1136,10 +1141,10 @@ with t9:
     _lang_groups = ["무시험","저급(1~2)","중급(3~4)","고급(5~7)","영어트랙"]
     lang_rates = {l: base_rate("어학급수그룹", l) for l in _lang_groups}
 
-    overall_rate = len(df_bu_all) / len(df_denom_base) if len(df_denom_base)>0 else 0.0
+    overall_rate = len(df_sim_bu) / len(df_sim_denom) if len(df_sim_denom)>0 else 0.0
 
-    # 현재 어학 분포 (2023~2025 기준)
-    lang_dist_cur = (df_denom_base["어학급수그룹"]
+    # 현재 어학 분포 (분모포함 Y 기준)
+    lang_dist_cur = (df_sim_denom["어학급수그룹"]
                      .value_counts(normalize=True)
                      .reindex(_lang_groups, fill_value=0))
     cur_lang_rate = sum(float(lang_dist_cur.get(l,0)) * lang_rates.get(l,0) for l in _lang_groups)
@@ -1160,8 +1165,8 @@ with t9:
         new_rate = sum(float(new_dist.get(l,0)) * lang_rates.get(l,0) for l in keep)
         return new_rate / cur_lang_rate if cur_lang_rate > 0 else 1.0
 
-    # 현재 교육과정 분포
-    cur_gen_pct = float((df_denom_base["교육과정구분"]=="일반과정").mean())
+    # 현재 교육과정 분포 (분모포함 Y 기준)
+    cur_gen_pct = float((df_sim_denom["교육과정구분"]=="일반과정").mean())
     cur_crs_rate = (cur_gen_pct * crs_rates.get("일반과정",0) +
                    (1-cur_gen_pct) * crs_rates.get("전공심화",0))
 
@@ -1169,8 +1174,8 @@ with t9:
         new_rate = gen_pct * crs_rates.get("일반과정",0) + (1-gen_pct) * crs_rates.get("전공심화",0)
         return new_rate / cur_crs_rate if cur_crs_rate > 0 else 1.0
 
-    # 현재 국적 분포 (과거 3년 평균)
-    cur_nat_dist = (df_denom_base["국적_그룹"]
+    # 현재 국적 분포 (분모포함 Y 기준)
+    cur_nat_dist = (df_sim_denom["국적_그룹"]
                     .value_counts(normalize=True)
                     .reindex(_VALID, fill_value=0))
     cur_nat_dist_pct = {n: float(cur_nat_dist.get(n,0))*100 for n in _VALID}
@@ -1180,7 +1185,8 @@ with t9:
     sc1, sc2 = st.columns([1,2])
 
     with sc1:
-        total_recruit = st.number_input("총 모집 예정 인원", min_value=100, max_value=10000,
+        # [수정 포인트] 시뮬레이션 기준을 명확히 하기 위해 라벨 수정
+        total_denom = st.number_input("26년 예상 통계 반영인원 (분모)", min_value=100, max_value=10000,
                                         value=2800, step=100)
         lang_policy = st.radio("어학기준",
             ["현행유지","TOPIK2급이상","TOPIK3급이상","무시험폐지"])
@@ -1234,13 +1240,13 @@ with t9:
 
     # 현재 시나리오
     cur_nat_pct = {n: float(cur_nat_dist.get(n,0)) for n in _VALID}
-    cur_rate_pct, cur_bu = simulate(total_recruit, cur_nat_pct, "현행유지", cur_gen_pct)
+    cur_rate_pct, cur_bu = simulate(total_denom, cur_nat_pct, "현행유지", cur_gen_pct)
 
     # 시뮬레이션 A (사용자 설정)
-    sim_rate_pct, sim_bu = simulate(total_recruit, nat_sim, lang_policy, gen_pct_slider)
+    sim_rate_pct, sim_bu = simulate(total_denom, nat_sim, lang_policy, gen_pct_slider)
 
     # 최적화 시나리오 B (TOPIK3+일반과정 비중 고정)
-    opt_rate_pct, opt_bu = simulate(total_recruit, nat_sim, "TOPIK3급이상", gen_pct_slider)
+    opt_rate_pct, opt_bu = simulate(total_denom, nat_sim, "TOPIK3급이상", gen_pct_slider)
 
     CERT_THRESHOLD = 5.0  # 인증기준 5%
 
@@ -1280,13 +1286,13 @@ with t9:
 
     # 시나리오 비교 테이블
     cmp_data = {
-        "항목": ["총 모집인원","예상 불체율(%)","예상 불체인원","인증기준(5%) 충족",
+        "항목": ["26년 예상 통계 반영인원(분모)","예상 불체율(%)","예상 불체인원","인증기준(5%) 충족",
                  "어학기준","일반과정 비중(%)"],
-        "현재": [f"{total_recruit:,}명", f"{cur_rate_pct:.2f}%", f"{cur_bu:.0f}명",
+        "현재": [f"{total_denom:,}명", f"{cur_rate_pct:.2f}%", f"{cur_bu:.0f}명",
                   "✅" if cur_rate_pct<=5 else "❌", "현행유지", f"{cur_gen_pct*100:.0f}%"],
-        "시나리오 A": [f"{total_recruit:,}명", f"{sim_rate_pct:.2f}%", f"{sim_bu:.0f}명",
+        "시나리오 A": [f"{total_denom:,}명", f"{sim_rate_pct:.2f}%", f"{sim_bu:.0f}명",
                        "✅" if sim_rate_pct<=5 else "❌", lang_policy, f"{gen_pct_slider*100:.0f}%"],
-        "시나리오 B": [f"{total_recruit:,}명", f"{opt_rate_pct:.2f}%", f"{opt_bu:.0f}명",
+        "시나리오 B": [f"{total_denom:,}명", f"{opt_rate_pct:.2f}%", f"{opt_bu:.0f}명",
                        "✅" if opt_rate_pct<=5 else "❌", "TOPIK3급이상", f"{gen_pct_slider*100:.0f}%"],
     }
     st.dataframe(pd.DataFrame(cmp_data), use_container_width=True, hide_index=True)
@@ -1296,8 +1302,8 @@ with t9:
     for nat in _VALID:
         prop_a = nat_sim.get(nat, 0)
         prop_c = float(cur_nat_dist.get(nat, 0))
-        bu_a = total_recruit * prop_a * nat_rates.get(nat, 0)
-        bu_c = total_recruit * prop_c * nat_rates.get(nat, 0)
+        bu_a = total_denom * prop_a * nat_rates.get(nat, 0)
+        bu_c = total_denom * prop_c * nat_rates.get(nat, 0)
         nat_sim_data.append({
             "국적": nat,
             "현재 예상불체": round(bu_c,1),
@@ -1330,7 +1336,6 @@ with t9:
     kf(f"시뮬레이션A 예상 불체율 <b>{sim_rate_pct:.2f}%</b> / "
        f"현재 대비 {'<span class=\"r\">+' + f'{sim_rate_pct-cur_rate_pct:.2f}%' + ' 증가' if sim_rate_pct>cur_rate_pct else '<span class=\"g\">' + f'{cur_rate_pct-sim_rate_pct:.2f}%' + ' 감소'}</span> / "
        f"TOPIK3급 강화 시 {opt_rate_pct:.2f}% 예상")
-
 # ── 하단 ───────────────────────────────────────────────────────────
 st.divider()
 st.caption(f"데이터: {FILE} | 불체자 분자: 2019~2025 전수, 분모: 2023~2025 입학생 | "
