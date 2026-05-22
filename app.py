@@ -95,6 +95,8 @@ else:
 st.title("🎓 외국인유학생 모니터링·예측 대시보드")
 st.markdown(
     f"**스냅샷**: `{snap_date}`  &nbsp;|&nbsp;  **산출일시**: `{generated_at}`"
+    f"  &nbsp;|&nbsp;  "
+    f":orange[**📊 단면 분석 기반**] &nbsp; :gray[시계열 한계 — 스냅샷 단일 관측 기준]"
 )
 st.divider()
 
@@ -284,6 +286,7 @@ with tabs[5]:
 
 # ── 탭7: 위험군 v2 ────────────────────────────────────────────────────────────
 with tabs[6]:
+    st.caption(":orange[📊 단면 분석 기반, 시계열 한계] — RF/XGB 앙상블 위험점수. 스냅샷 시점 변수 기준.")
     df = sheets.get("risk_group_v2")
     if _is_stub(df):
         note_val = df.iloc[0]["note"] if (df is not None and not df.empty and "note" in df.columns) else "—"
@@ -340,6 +343,7 @@ with tabs[6]:
 
 # ── 탭8: 예측모델 ─────────────────────────────────────────────────────────────
 with tabs[7]:
+    st.caption(":orange[📊 단면 분석 기반, 시계열 한계] — 5모델 학습·비교 모두 스냅샷 단면 데이터 기준.")
     df = sheets.get("model_results")
     if _is_stub(df):
         note_val = df.iloc[0]["note"] if (df is not None and not df.empty and "note" in df.columns) else "—"
@@ -390,6 +394,7 @@ with tabs[7]:
 
 # ── 탭9: 시점예측 (생존곡선) ─────────────────────────────────────────────────
 with tabs[8]:
+    st.caption(":orange[📊 단면 분석 기반, 시계열 한계] — 이수학기 기반 KM 근사. 실제 종단 추적 아님.")
     df = sheets.get("survival_curves")
     if _is_stub(df):
         _show_stub()
